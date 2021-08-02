@@ -1,4 +1,4 @@
-on: push
+on: [push, pull_request]
 
 jobs:
   build_job:
@@ -11,7 +11,7 @@ jobs:
       matrix:
         include:
           - arch: ppc64le
-            distro: ubuntu20.04
+            distro: ubuntu18.04
 
     steps:
       - uses: actions/checkout@v2.1.0
@@ -50,9 +50,25 @@ jobs:
             case "${{ matrix.distro }}" in
               ubuntu*|jessie|stretch|buster|bullseye)
                 apt-get update -q -y
-                apt-get install -q -y default-jre
+                apt-get install -q -y git default-jre
+                ;;
+              fedora*)
+                dnf -y update
+                dnf -y install git which
+                ;;
+              alpine*)
+                apk update
+                apk add git
                 ;;
             esac
 
-      - name: Run Command
-        run: java -version
+          # Produce a binary artifact and place it in the mounted volume
+          run: |
+            cp $(which git) "/artifacts/${artifact_name}"
+            echo "Produced artifact at /artifacts/${artifact_name}"
+
+      - name: Show the artifact
+        # Items placed in /artifacts in the container will be in
+        # ${PWD}/artifacts on the host.
+        run: |
+          ls -al "${PWD}/artifacts"
